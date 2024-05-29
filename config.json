@@ -1,1 +1,14 @@
-{"virustotal": ["last_dns_records", "last_analysis_stats"], "otx": ["sections", "pulse_info"]}
+{
+    "virustotal": [
+        "last_dns_records",
+        "last_analysis_stats",
+        "tags"
+    ],
+    "otx": [
+        "sections",
+        "pulse_info"
+    ],
+    "cti_scan": [
+        "vt"
+    ]
+}
