@@ -1,15 +1,16 @@
 import os
+import re
 import argparse
 import json
 from colorama import Fore, Style, init
 from dotenv import load_dotenv
-from vt import is_ip_address, get_virustotal_data
-from otx import get_otx_data
-from abuseipdb import get_abuseipdb_data
-from greynoise import get_greynoise_data
-from urlhaus import get_urlhaus_data
-from shodan import get_shodan_data
-from jsonify import format_json
+from tools.vt import is_ip_address, get_virustotal_data
+from tools.otx import get_otx_data
+from tools.abuseipdb import get_abuseipdb_data
+from tools.greynoise import get_greynoise_data
+from tools.urlhaus import get_urlhaus_data
+from tools.shodan import get_shodan_data
+from tools.jsonify import format_json
 
 init(autoreset=True)
 load_dotenv()
@@ -31,6 +32,7 @@ MENU = """
 5. GreyNoise Query
 6. URLHaus Query
 7. Shodan Query
+8. CTI Scan (HTML Output)
 """
 
 CONFIG_FILE = "config.json"
@@ -38,24 +40,56 @@ CONFIG_FILE = "config.json"
 def load_config():
     if not os.path.exists(CONFIG_FILE):
         with open(CONFIG_FILE, 'w') as file:
-            json.dump({"virustotal": ["last_analysis_stats", "whois"], "otx": ["sections", "whois", "alexa"]}, file)
+            json.dump({"virustotal": ["last_analysis_stats", "whois"], "otx": ["sections", "whois", "alexa"], "cti_scan": ["vt", "otx", "abuseipdb", "greynoise", "shodan", "urlhaus"]}, file)
     with open(CONFIG_FILE, 'r') as file:
         return json.load(file)
 
-def configure():
-    config = load_config()
-    
+def configure_fields(config):
     print("Configure VirusTotal fields:")
     vt_fields = input("Enter VirusTotal fields to display (comma separated): ").strip().split(',')
-    config['virustotal'] = [field.strip() for field in vt_fields]
-    
+    if vt_fields != ['']:
+        config['virustotal'] = [field.strip() for field in vt_fields]
+
     print("Configure OTX fields:")
     otx_fields = input("Enter OTX fields to display (comma separated): ").strip().split(',')
-    config['otx'] = [field.strip() for field in otx_fields]
-    
+    if otx_fields != ['']:
+        config['otx'] = [field.strip() for field in otx_fields]
+
+def configure_cti_scan(config):
+    tools_menu = """
+    Select tools to use in CTI Scan (comma separated numbers):
+    1. VirusTotal
+    2. OTX
+    3. AbuseIPDB
+    4. GreyNoise
+    5. Shodan
+    6. URLHaus
+    """
+    print(tools_menu)
+    selected_tools = input("Enter your choices: ").strip().split(',')
+    if selected_tools != ['']:
+        tools_mapping = {
+            '1': 'vt',
+            '2': 'otx',
+            '3': 'abuseipdb',
+            '4': 'greynoise',
+            '5': 'shodan',
+            '6': 'urlhaus'
+        }
+        config['cti_scan'] = [tools_mapping[choice.strip()] for choice in selected_tools if choice.strip() in tools_mapping]
+
+def save_config(config):
     with open(CONFIG_FILE, 'w') as file:
-        json.dump(config, file)
+        json.dump(config, file, indent=4)
     print("Configuration saved.")
+
+def configure(args):
+    config = load_config()
+    if args.fields:
+        configure_fields(config)
+    if args.cti_scan:
+        configure_cti_scan(config)
+    save_config(config)
 
 def check_api_keys():
     otx_api_key = os.getenv('OTX_API_KEY')
@@ -98,90 +132,136 @@ def vt_query(vt_api_key, ip_or_domain, config):
     vt_data = get_virustotal_data(vt_api_key, ip_or_domain, request_type)
     if vt_data:
         filtered_data = filter_fields(vt_data['data']['attributes'], config['virustotal'])
-        print(format_json(filtered_data))
+        return format_json(filtered_data)
     else:
-        print(f"{Fore.RED}No data found in VirusTotal for {ip_or_domain}")
+        return f"{Fore.RED}No data found in VirusTotal for {ip_or_domain}"
 
 def otx_query(otx_api_key, ip_or_domain, config):
     request_type = 'ip' if is_ip_address(ip_or_domain) else 'domain'
     otx_data = get_otx_data(otx_api_key, ip_or_domain, request_type)
     if otx_data:
         filtered_data = filter_fields(otx_data, config['otx'])
-        print(format_json(filtered_data))
+        return format_json(filtered_data)
     else:
-        print(f"{Fore.RED}No data found in OTX for {ip_or_domain}")
+        return f"{Fore.RED}No data found in OTX for {ip_or_domain}"
 
 def abuseipdb_query(abuseipdb_api_key, ip):
     abuseipdb_data = get_abuseipdb_data(abuseipdb_api_key, ip)
     if abuseipdb_data:
-        print(format_json(abuseipdb_data))
+        return format_json(abuseipdb_data)
     else:
-        print(f"{Fore.RED}No data found in AbuseIPDB for {ip}")
+        return f"{Fore.RED}No data found in AbuseIPDB for {ip}"
 
 def greynoise_query(greynoise_api_key, ip):
     greynoise_data = get_greynoise_data(greynoise_api_key, ip)
     if greynoise_data:
-        print(format_json(greynoise_data))
+        return format_json(greynoise_data)
     else:
-        print(f"{Fore.RED}No data found in GreyNoise for {ip}")
+        return f"{Fore.RED}No data found in GreyNoise for {ip}"
 
 def urlhaus_query(domain):
     urlhaus_data = get_urlhaus_data(domain)
     if urlhaus_data:
-        print(format_json(urlhaus_data))
+        return format_json(urlhaus_data)
     else:
-        print(f"{Fore.RED}No data found in URLHaus for {domain}")
+        return f"{Fore.RED}No data found in URLHaus for {domain}"
 
 def shodan_query(shodan_api_key, ip):
     shodan_data = get_shodan_data(shodan_api_key, ip)
     if shodan_data:
-        print(format_json(shodan_data))
+        return format_json(shodan_data)
     else:
-        print(f"{Fore.RED}No data found in Shodan for {ip}")
+        return f"{Fore.RED}No data found in Shodan for {ip}"
 
 def recon_mode(vt_api_key, otx_api_key, abuseipdb_api_key, greynoise_api_key, shodan_api_key, ip_or_domain, config):
-    print("\nVirusTotal Data:")
-    vt_query(vt_api_key, ip_or_domain, config)
-    print("\nOTX Data:")
-    otx_query(otx_api_key, ip_or_domain, config)
-    print("\nAbuseIPDB Data:")
-    abuseipdb_query(abuseipdb_api_key, ip_or_domain)
-    print("\nGreyNoise Data:")
-    greynoise_query(greynoise_api_key, ip_or_domain)
+    results = []
+    results.append(f"\nVirusTotal Data:\n{vt_query(vt_api_key, ip_or_domain, config)}")
+    results.append(f"\nOTX Data:\n{otx_query(otx_api_key, ip_or_domain, config)}")
+    results.append(f"\nAbuseIPDB Data:\n{abuseipdb_query(abuseipdb_api_key, ip_or_domain)}")
+    results.append(f"\nGreyNoise Data:\n{greynoise_query(greynoise_api_key, ip_or_domain)}")
     if is_ip_address(ip_or_domain):
-        print("\nShodan Data:")
-        shodan_query(shodan_api_key, ip_or_domain)
+        results.append(f"\nShodan Data:\n{shodan_query(shodan_api_key, ip_or_domain)}")
     else:
-        print("\nURLHaus Data:")
-        urlhaus_query(ip_or_domain)
+        results.append(f"\nURLHaus Data:\n{urlhaus_query(ip_or_domain)}")
+    return "\n".join(results)
+
+def process_and_collect_results(ip_or_domain_list, vt_api_key, otx_api_key, abuseipdb_api_key, greynoise_api_key, shodan_api_key, config, mode):
+    results = []
+    for ip_or_domain in ip_or_domain_list:
+        result_data = {"id": ip_or_domain.replace('.', '_').replace(':', '_'), "title": f"Results for {ip_or_domain}", "data": ""}
+        if mode == 'vt':
+            result_data["data"] = vt_query(vt_api_key, ip_or_domain, config)
+        elif mode == 'otx':
+            result_data["data"] = otx_query(otx_api_key, ip_or_domain, config)
+        elif mode == 'combined':
+            result_data["data"] = recon_mode(vt_api_key, otx_api_key, abuseipdb_api_key, greynoise_api_key, shodan_api_key, ip_or_domain, config)
+        elif mode == 'abuseipdb':
+            result_data["data"] = abuseipdb_query(abuseipdb_api_key, ip_or_domain)
+        elif mode == 'greynoise':
+            result_data["data"] = greynoise_query(greynoise_api_key, ip_or_domain)
+        elif mode == 'urlhaus':
+            result_data["data"] = urlhaus_query(ip_or_domain)
+        elif mode == 'shodan':
+            result_data["data"] = shodan_query(shodan_api_key, ip_or_domain)
+        elif mode == 'cti_scan':
+            selected_tools = config.get('cti_scan', [])
+            result_data["data"] = ""
+            if 'vt' in selected_tools:
+                result_data["data"] += f"VirusTotal:\n{vt_query(vt_api_key, ip_or_domain, config)}\n\n"
+            if 'otx' in selected_tools:
+                result_data["data"] += f"OTX:\n{otx_query(otx_api_key, ip_or_domain, config)}\n\n"
+            if 'abuseipdb' in selected_tools:
+                result_data["data"] += f"AbuseIPDB:\n{abuseipdb_query(abuseipdb_api_key, ip_or_domain)}\n\n"
+            if 'greynoise' in selected_tools:
+                result_data["data"] += f"GreyNoise:\n{greynoise_query(greynoise_api_key, ip_or_domain)}\n\n"
+            if 'shodan' in selected_tools and is_ip_address(ip_or_domain):
+                result_data["data"] += f"Shodan:\n{shodan_query(shodan_api_key, ip_or_domain)}\n\n"
+            if 'urlhaus' in selected_tools and not is_ip_address(ip_or_domain):
+                result_data["data"] += f"URLHaus:\n{urlhaus_query(ip_or_domain)}\n\n"
+        results.append(result_data)
+    return results
+
+def remove_color_codes(text):
+    ansi_escape = re.compile(r'(?:\x1B[@-_]|[0-?]|[\[|\]]|[ -/]|[@-~])')
+    return ansi_escape.sub('', text)
+
+def generate_html_report(results):
+    with open('template.html', 'r') as template_file:
+        template = template_file.read()
+
+    content = ""
+    for result in results:
+        cleaned_data = remove_color_codes(result["data"])
+        section = f"""
+        <div class="container">
+            <div class="toggle" onclick="toggleContent('{result["id"]}')">{result["title"]}</div>
+            <div class="content" id="{result["id"]}">
+                <pre>{cleaned_data}</pre>
+            </div>
+        </div>
+        """
+        content += section
+
+    html_content = template.replace("{{content}}", content)
+    with open('report.html', 'w') as report_file:
+        report_file.write(html_content)
 
 def process_bulk(file_path, vt_api_key, otx_api_key, abuseipdb_api_key, greynoise_api_key, shodan_api_key, config, mode):
     with open(file_path, 'r') as file:
         ip_or_domain_list = [line.strip() for line in file]
     
-    for ip_or_domain in ip_or_domain_list:
-        print(f"\nProcessing {ip_or_domain}\n" + "="*50)
-        if mode == 'vt':
-            vt_query(vt_api_key, ip_or_domain, config)
-        elif mode == 'otx':
-            otx_query(otx_api_key, ip_or_domain, config)
-        elif mode == 'combined':
-            recon_mode(vt_api_key, otx_api_key, abuseipdb_api_key, greynoise_api_key, shodan_api_key, ip_or_domain, config)
-        elif mode == 'abuseipdb':
-            abuseipdb_query(abuseipdb_api_key, ip_or_domain)
-        elif mode == 'greynoise':
-            greynoise_query(greynoise_api_key, ip_or_domain)
-        elif mode == 'urlhaus':
-            urlhaus_query(ip_or_domain)
-        elif mode == 'shodan':
-            shodan_query(shodan_api_key, ip_or_domain)
-        else:
-            print(f"{Fore.RED}Invalid mode. Please choose --vt, --otx, --combined, --abuseipdb, --greynoise, --urlhaus, or --shodan.")
-        print("\n" + "="*50 + "\n")
+    results = process_and_collect_results(ip_or_domain_list, vt_api_key, otx_api_key, abuseipdb_api_key, greynoise_api_key, shodan_api_key, config, mode)
+    if mode == 'cti_scan':
+        generate_html_report(results)
+    else:
+        for result in results:
+            print(f"\n{result['title']}\n{result['data']}\n")
 
 def main():
     parser = argparse.ArgumentParser(description="Unified OTX and VirusTotal CLI")
-    parser.add_argument('--configure', action='store_true', help="Configure fields to display")
+    parser.add_argument('--configure', action='store_true', help="Configure the tool")
+    parser.add_argument('--fields', action='store_true', help="Configure fields to display (used with --configure)")
+    parser.add_argument('--cti-scan', action='store_true', help="Configure tools for CTI Scan (used with --configure)")
     parser.add_argument('--bulk', help="Path to the file containing IPs/domains for bulk scan", required=False)
     parser.add_argument('--vt', action='store_true', help="VirusTotal query mode")
     parser.add_argument('--otx', action='store_true', help="OTX query mode")
@@ -190,17 +270,46 @@ def main():
     parser.add_argument('--greynoise', action='store_true', help="GreyNoise query mode")
     parser.add_argument('--urlhaus', action='store_true', help="URLHaus query mode")
     parser.add_argument('--shodan', action='store_true', help="Shodan query mode")
+    parser.add_argument('--cti-scan-mode', action='store_true', help="CTI Scan mode (all tools, HTML output)")
+    parser.add_argument('ip_or_domain', nargs='?', help="IP or domain to query directly")
     args = parser.parse_args()
 
     if args.configure:
-        configure()
+        configure(args)
         return
 
     config = load_config()
-    print(ASCII_ART)
-    print(MENU)
 
     otx_api_key, vt_api_key, abuseipdb_api_key, greynoise_api_key, shodan_api_key = check_api_keys()
+
+    if args.ip_or_domain:
+        ip_or_domain_list = [args.ip_or_domain]
+        if args.vt:
+            results = process_and_collect_results(ip_or_domain_list, vt_api_key, otx_api_key, abuseipdb_api_key, greynoise_api_key, shodan_api_key, config, 'vt')
+        elif args.otx:
+            results = process_and_collect_results(ip_or_domain_list, vt_api_key, otx_api_key, abuseipdb_api_key, greynoise_api_key, shodan_api_key, config, 'otx')
+        elif args.combined:
+            results = process_and_collect_results(ip_or_domain_list, vt_api_key, otx_api_key, abuseipdb_api_key, greynoise_api_key, shodan_api_key, config, 'combined')
+        elif args.abuseipdb:
+            results = process_and_collect_results(ip_or_domain_list, vt_api_key, otx_api_key, abuseipdb_api_key, greynoise_api_key, shodan_api_key, config, 'abuseipdb')
+        elif args.greynoise:
+            results = process_and_collect_results(ip_or_domain_list, vt_api_key, otx_api_key, abuseipdb_api_key, greynoise_api_key, shodan_api_key, config, 'greynoise')
+        elif args.urlhaus:
+            results = process_and_collect_results(ip_or_domain_list, vt_api_key, otx_api_key, abuseipdb_api_key, greynoise_api_key, shodan_api_key, config, 'urlhaus')
+        elif args.shodan:
+            results = process_and_collect_results(ip_or_domain_list, vt_api_key, otx_api_key, abuseipdb_api_key, greynoise_api_key, shodan_api_key, config, 'shodan')
+        elif args.cti_scan_mode:
+            results = process_and_collect_results(ip_or_domain_list, vt_api_key, otx_api_key, abuseipdb_api_key, greynoise_api_key, shodan_api_key, config, 'cti_scan')
+            generate_html_report(results)
+        else:
+            print(f"{Fore.RED}Please specify a mode for processing: --vt, --otx, --combined, --abuseipdb, --greynoise, --urlhaus, --shodan, or --cti-scan-mode.")
+            return
+        for result in results:
+            print(f"\n{result['title']}\n{result['data']}\n")
+        return
+
+    print(ASCII_ART)
+    print(MENU)
 
     if args.bulk:
         if args.vt:
@@ -217,33 +326,43 @@ def main():
             process_bulk(args.bulk, vt_api_key, otx_api_key, abuseipdb_api_key, greynoise_api_key, shodan_api_key, config, 'urlhaus')
         elif args.shodan:
             process_bulk(args.bulk, vt_api_key, otx_api_key, abuseipdb_api_key, greynoise_api_key, shodan_api_key, config, 'shodan')
+        elif args.cti_scan_mode:
+            process_bulk(args.bulk, vt_api_key, otx_api_key, abuseipdb_api_key, greynoise_api_key, shodan_api_key, config, 'cti_scan')
         else:
-            print(f"{Fore.RED}Please specify a mode for bulk processing: --vt, --otx, --combined, --abuseipdb, --greynoise, --urlhaus, or --shodan.")
+            print(f"{Fore.RED}Please specify a mode for bulk processing: --vt, --otx, --combined, --abuseipdb, --greynoise, --urlhaus, --shodan, or --cti-scan-mode.")
         return
 
-    choice = input("Choose an option (1/2/3/4/5/6/7): ").strip()
+    choice = input("Choose an option (1/2/3/4/5/6/7/8): ").strip()
     ip_or_domain_input = input("Enter the IP or domain addresses separated by commas: ").strip()
     ip_or_domain_list = [item.strip() for item in ip_or_domain_input.split(',')]
 
-    for ip_or_domain in ip_or_domain_list:
-        print(f"\nProcessing {ip_or_domain}\n" + "="*50)
-        if choice == '1':
-            vt_query(vt_api_key, ip_or_domain, config)
-        elif choice == '2':
-            otx_query(otx_api_key, ip_or_domain, config)
-        elif choice == '3':
-            recon_mode(vt_api_key, otx_api_key, abuseipdb_api_key, greynoise_api_key, shodan_api_key, ip_or_domain, config)
-        elif choice == '4':
-            abuseipdb_query(abuseipdb_api_key, ip_or_domain)
-        elif choice == '5':
-            greynoise_query(greynoise_api_key, ip_or_domain)
-        elif choice == '6':
-            urlhaus_query(ip_or_domain)
-        elif choice == '7':
-            shodan_query(shodan_api_key, ip_or_domain)
-        else:
-            print(f"{Fore.RED}Invalid choice. Please choose 1, 2, 3, 4, 5, 6, or 7.")
-        print("\n" + "="*50 + "\n")
+    mode = ''
+    if choice == '1':
+        mode = 'vt'
+    elif choice == '2':
+        mode = 'otx'
+    elif choice == '3':
+        mode = 'combined'
+    elif choice == '4':
+        mode = 'abuseipdb'
+    elif choice == '5':
+        mode = 'greynoise'
+    elif choice == '6':
+        mode = 'urlhaus'
+    elif choice == '7':
+        mode = 'shodan'
+    elif choice == '8':
+        mode = 'cti_scan'
+    else:
+        print(f"{Fore.RED}Invalid choice. Please choose 1, 2, 3, 4, 5, 6, 7, or 8.")
+        return
+
+    results = process_and_collect_results(ip_or_domain_list, vt_api_key, otx_api_key, abuseipdb_api_key, greynoise_api_key, shodan_api_key, config, mode)
+    if mode == 'cti_scan':
+        generate_html_report(results)
+    else:
+        for result in results:
+            print(f"\n{result['title']}\n{result['data']}\n")
 
 if __name__ == "__main__":
     main()

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CTI Report</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { margin-bottom: 20px; }
+        .toggle { cursor: pointer; color: #007BFF; }
+        .content { display: none; margin-top: 10px; }
+    </style>
+    <script>
+        function toggleContent(id) {
+            var content = document.getElementById(id);
+            if (content.style.display === "none") {
+                content.style.display = "block";
+            } else {
+                content.style.display = "none";
+            }
+        }
+    </script>
+</head>
+<body>
+    <h1>Cyber Threat Intelligence Report</h1>
+    {{content}}
+</body>
+</html>
