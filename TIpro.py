@@ -222,7 +222,7 @@ def process_and_collect_results(ip_or_domain_list, vt_api_key, otx_api_key, abus
     return results
 
 def remove_color_codes(text):
-    ansi_escape = re.compile(r'(?:\x1B[@-_]|[0-?]|[\[|\]]|[ -/]|[@-~])')
+    ansi_escape = re.compile(r'\x1B\[[0-?]*[ -/]*[@-~]')
     return ansi_escape.sub('', text)
 
 def generate_html_report(results):
@@ -258,7 +258,7 @@ def process_bulk(file_path, vt_api_key, otx_api_key, abuseipdb_api_key, greynois
             print(f"\n{result['title']}\n{result['data']}\n")
 
 def main():
-    parser = argparse.ArgumentParser(description="Unified OTX and VirusTotal CLI")
+    parser = argparse.ArgumentParser(description="Unified CTI Tool")
     parser.add_argument('--configure', action='store_true', help="Configure the tool")
     parser.add_argument('--fields', action='store_true', help="Configure fields to display (used with --configure)")
     parser.add_argument('--cti-scan', action='store_true', help="Configure tools for CTI Scan (used with --configure)")
