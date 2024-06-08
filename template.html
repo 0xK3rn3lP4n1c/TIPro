@@ -3,12 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CTI Report</title>
+    <title>CTI Scan Results</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .container { margin-bottom: 20px; }
-        .toggle { cursor: pointer; color: #007BFF; }
-        .content { display: none; margin-top: 10px; }
+        body {
+            background-image: url('2pfFn7.jpg');
+            background-repeat: repeat;
+            background-size: 100%;
+            font-family: Arial, sans-serif;
+            color: #333;
+        }
+        .container {
+            margin: 20px;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .toggle {
+            cursor: pointer;
+            background: #47bbff;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin-bottom: 5px;
+            font-weight: bold;
+            text-align: center;
+        }
+        .content {
+            display: none;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-top: none;
+            border-radius: 5px;
+            background: #f9f9f9;
+        }
+        .virus-total, .otx, .other-tools {
+            color: #000;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        .virus-total {
+            background-color: #ffebeb;
+        }
+        .otx {
+            background-color: #ebffeb;
+        }
+        .other-tools {
+            background-color: #ebf0ff;
+        }
+        h1 {
+            text-align: center;
+            color: #47bbff;
+        }
     </style>
     <script>
         function toggleContent(id) {
@@ -22,7 +70,9 @@
     </script>
 </head>
 <body>
-    <h1>Cyber Threat Intelligence Report</h1>
-    {{content}}
+    <h1>CTI Scan Results</h1>
+    <div class="container">
+        {{content}}
+    </div>
 </body>
 </html>
