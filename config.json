@@ -9,6 +9,10 @@
         "pulse_info"
     ],
     "cti_scan": [
-        "vt"
+        "vt",
+        "otx",
+        "abuseipdb",
+        "greynoise",
+        "shodan"
     ]
 }
