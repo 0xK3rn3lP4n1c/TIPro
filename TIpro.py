@@ -10,7 +10,7 @@ from tools.abuseipdb import get_abuseipdb_data
 from tools.greynoise import get_greynoise_data
 from tools.urlhaus import get_urlhaus_data
 from tools.shodan import get_shodan_data
-from tools.jsonify import format_json
+from tools.jsonify import format_json, format_json_pretty_html, calculate_red_shade, process_tool_output, format_json_with_toggles, filter_fields
 
 init(autoreset=True)
 load_dotenv()
@@ -132,7 +132,7 @@ def vt_query(vt_api_key, ip_or_domain, config):
     vt_data = get_virustotal_data(vt_api_key, ip_or_domain, request_type)
     if vt_data:
         filtered_data = filter_fields(vt_data['data']['attributes'], config['virustotal'])
-        return format_json(filtered_data)
+        return process_tool_output('virus-total', filtered_data, 'last_analysis_stats.malicious')
     else:
         return f"{Fore.RED}No data found in VirusTotal for {ip_or_domain}"
 
@@ -141,35 +141,35 @@ def otx_query(otx_api_key, ip_or_domain, config):
     otx_data = get_otx_data(otx_api_key, ip_or_domain, request_type)
     if otx_data:
         filtered_data = filter_fields(otx_data, config['otx'])
-        return format_json(filtered_data)
+        return process_tool_output('otx', filtered_data)
     else:
         return f"{Fore.RED}No data found in OTX for {ip_or_domain}"
 
 def abuseipdb_query(abuseipdb_api_key, ip):
     abuseipdb_data = get_abuseipdb_data(abuseipdb_api_key, ip)
     if abuseipdb_data:
-        return format_json(abuseipdb_data)
+        return process_tool_output('abuseipdb', abuseipdb_data)
     else:
         return f"{Fore.RED}No data found in AbuseIPDB for {ip}"
 
 def greynoise_query(greynoise_api_key, ip):
     greynoise_data = get_greynoise_data(greynoise_api_key, ip)
     if greynoise_data:
-        return format_json(greynoise_data)
+        return process_tool_output('greynoise', greynoise_data)
     else:
         return f"{Fore.RED}No data found in GreyNoise for {ip}"
 
 def urlhaus_query(domain):
     urlhaus_data = get_urlhaus_data(domain)
     if urlhaus_data:
-        return format_json(urlhaus_data)
+        return process_tool_output('urlhaus', urlhaus_data)
     else:
         return f"{Fore.RED}No data found in URLHaus for {domain}"
 
 def shodan_query(shodan_api_key, ip):
     shodan_data = get_shodan_data(shodan_api_key, ip)
     if shodan_data:
-        return format_json(shodan_data)
+        return process_tool_output('shodan', shodan_data)
     else:
         return f"{Fore.RED}No data found in Shodan for {ip}"
 
@@ -236,7 +236,7 @@ def generate_html_report(results):
         <div class="container">
             <div class="toggle" onclick="toggleContent('{result["id"]}')">{result["title"]}</div>
             <div class="content" id="{result["id"]}">
-                <pre>{cleaned_data}</pre>
+                {cleaned_data}
             </div>
         </div>
         """

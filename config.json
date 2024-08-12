@@ -1,5 +1,6 @@
 {
     "virustotal": [
+        "whois",
         "last_dns_records",
         "last_analysis_stats",
         "tags"
