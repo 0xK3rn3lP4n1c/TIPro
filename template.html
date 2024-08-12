@@ -57,6 +57,32 @@
             text-align: center;
             color: #47bbff;
         }
+        .json-container {
+        margin-left: 20px;
+        }
+
+        .json-toggle {
+            cursor: pointer;
+            font-family: monospace;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+        }
+
+        .json-toggle .arrow {
+            margin-right: 5px;
+            transition: transform 0.2s;
+        }
+
+        .json-toggle .arrow.collapsed {
+            transform: rotate(-90deg);
+        }
+
+        .json-content {
+            display: none;
+            margin-left: 15px;
+            font-family: monospace;
+        }
     </style>
     <script>
         function toggleContent(id) {
@@ -67,6 +93,18 @@
                 content.style.display = "none";
             }
         }
+
+        function toggleJsonContent(elementId) {
+        var content = document.getElementById(elementId);
+        var arrow = document.getElementById('arrow-' + elementId);
+        if (content.style.display === "none") {
+            content.style.display = "block";
+            arrow.classList.remove('collapsed');
+        } else {
+            content.style.display = "none";
+            arrow.classList.add('collapsed');
+        }
+    }
     </script>
 </head>
 <body>
